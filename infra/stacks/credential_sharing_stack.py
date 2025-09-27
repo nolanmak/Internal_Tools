@@ -40,8 +40,8 @@ class CredentialSharingStack(Stack):
                 s3.LifecycleRule(
                     id="AutoDelete24Hours",
                     enabled=True,
-                    expiration=Duration.hours(24),  # Delete files after 24 hours
-                    abort_incomplete_multipart_upload_after=Duration.hours(1),  # Clean up incomplete uploads
+                    expiration=Duration.days(1),  # Delete files after 1 day (24 hours)
+                    abort_incomplete_multipart_upload_after=Duration.days(1),  # Clean up incomplete uploads
                 ),
             ],
             cors=[
