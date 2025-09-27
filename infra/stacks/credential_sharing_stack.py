@@ -60,32 +60,7 @@ class CredentialSharingStack(Stack):
             ],
         )
 
-        # Optional: S3 bucket for logs of what was uploaded (with longer retention)
-        self.access_logs_bucket = s3.Bucket(
-            self,
-            f"CredentialsLogsBucket{resource_suffix}",
-            bucket_name=f"internal-tools-credentials-logs{resource_suffix.lower()}",
-            encryption=s3.BucketEncryption.S3_MANAGED,
-            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
-            removal_policy=RemovalPolicy.DESTROY,
-            auto_delete_objects=True,
-            lifecycle_rules=[
-                s3.LifecycleRule(
-                    id="DeleteLogs30Days",
-                    enabled=True,
-                    expiration=Duration.days(30),  # Keep logs for 30 days
-                ),
-            ],
-        )
-
-        # Enable access logging on the main bucket
-        self.credentials_bucket.add_property_override(
-            "LoggingConfiguration",
-            {
-                "DestinationBucketName": self.access_logs_bucket.bucket_name,
-                "LogFilePrefix": "access-logs/",
-            }
-        )
+        # Note: S3 access logging can be configured later if needed via AWS Console or CloudFormation
 
         # Outputs for easy access to bucket information
         CfnOutput(
