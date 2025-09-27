@@ -135,11 +135,13 @@ jobs:
       - name: CDK Bootstrap (if needed)
         env:
           ENV: ${{ needs.validate.outputs.environment }}
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
         run: |
           cd infra
           if ! aws cloudformation describe-stacks --stack-name CDKToolkit --region $AWS_DEFAULT_REGION > /dev/null 2>&1; then
             echo "🚀 Bootstrapping CDK for region $AWS_DEFAULT_REGION"
-            cdk bootstrap aws://${{ secrets.AWS_ACCOUNT_ID }}/$AWS_DEFAULT_REGION
+            echo "Using AWS Account ID: $CDK_DEFAULT_ACCOUNT"
+            cdk bootstrap aws://$CDK_DEFAULT_ACCOUNT/$AWS_DEFAULT_REGION
           else
             echo "✅ CDK already bootstrapped"
           fi
@@ -147,6 +149,7 @@ jobs:
       - name: Deploy All Stacks
         env:
           ENV: ${{ needs.validate.outputs.environment }}
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
         run: |
           cd infra
           echo "🚀 Deploying Internal Tools Infrastructure (Production)"

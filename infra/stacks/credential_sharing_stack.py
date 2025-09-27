@@ -1,7 +1,6 @@
 from aws_cdk import (
     Stack,
     aws_s3 as s3,
-    aws_s3_notifications as s3n,
     Duration,
     RemovalPolicy,
     CfnOutput,
