@@ -1,13 +1,6 @@
 name: Test Infrastructure
 
 on:
-  push:
-    branches: [ main, develop ]
-    paths:
-      - 'infra/**'
-      - 'src/**'
-      - 'tests/**'
-      - '.github/workflows/test.yml'
   pull_request:
     branches: [ main, develop ]
     paths:
@@ -54,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        environment: [dev, staging, production]
+        environment: [production]
     steps:
       - uses: actions/checkout@v4
 
@@ -68,7 +61,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
 
       - name: Install dependencies
         run: |

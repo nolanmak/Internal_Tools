@@ -17,22 +17,21 @@ env = Environment(
     region=os.environ.get("CDK_DEFAULT_REGION", "us-east-1"),
 )
 
-env_name = os.environ.get("ENV", "dev")
-resource_suffix = "" if env_name == "production" else f"-{env_name}"
+env_name = os.environ.get("ENV", "production")
 
-# 1. API Gateway Stack
+# 1. API Gateway Stack (Production only)
 api_stack = ApiStack(
     app,
-    f"InternalTools-ApiStack{resource_suffix}",
-    resource_suffix=resource_suffix,
+    "InternalTools-ApiStack",
+    resource_suffix="",
     env=env
 )
 
 # 2. Credential Sharing Stack (S3 bucket with 24-hour auto-delete)
 credential_sharing_stack = CredentialSharingStack(
     app,
-    f"InternalTools-CredentialSharingStack{resource_suffix}",
-    resource_suffix=resource_suffix,
+    "InternalTools-CredentialSharingStack",
+    resource_suffix="",
     env=env
 )
 

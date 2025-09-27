@@ -2,12 +2,7 @@ name: Deploy Internal Tools Infrastructure
 
 on:
   push:
-    branches: [ main, develop ]
-    paths:
-      - 'infra/**'
-      - '.github/workflows/deploy.yml'
-  pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
     paths:
       - 'infra/**'
       - '.github/workflows/deploy.yml'
@@ -16,11 +11,9 @@ on:
       environment:
         description: 'Environment to deploy to'
         required: true
-        default: 'dev'
+        default: 'production'
         type: choice
         options:
-        - dev
-        - staging
         - production
       stacks:
         description: 'Specific stacks to deploy (comma-separated, or "all")'
@@ -64,14 +57,8 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
             echo "deploy-stacks=${{ github.event.inputs.stacks }}" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "environment=production" >> $GITHUB_OUTPUT
-            echo "deploy-stacks=all" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
-            echo "environment=staging" >> $GITHUB_OUTPUT
-            echo "deploy-stacks=all" >> $GITHUB_OUTPUT
           else
-            echo "environment=dev" >> $GITHUB_OUTPUT
+            echo "environment=production" >> $GITHUB_OUTPUT
             echo "deploy-stacks=all" >> $GITHUB_OUTPUT
           fi
 
@@ -85,7 +72,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
 
       - name: Install dependencies
         run: |
@@ -124,7 +110,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -164,21 +149,17 @@ jobs:
           ENV: ${{ needs.validate.outputs.environment }}
         run: |
           cd infra
-          echo "🚀 Deploying Internal Tools Infrastructure"
-          resource_suffix=""
-          if [ "$ENV" != "production" ]; then
-            resource_suffix="-$ENV"
-          fi
+          echo "🚀 Deploying Internal Tools Infrastructure (Production)"
 
           # Deploy API Gateway stack
           echo "📡 Deploying API Gateway Stack"
-          cdk deploy "InternalTools-ApiStack$resource_suffix" \
+          cdk deploy "InternalTools-ApiStack" \
             --require-approval never \
             --context environment=$ENV
 
           # Deploy Credential Sharing stack
           echo "🔐 Deploying Credential Sharing Stack"
-          cdk deploy "InternalTools-CredentialSharingStack$resource_suffix" \
+          cdk deploy "InternalTools-CredentialSharingStack" \
             --require-approval never \
             --context environment=$ENV
 
