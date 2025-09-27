@@ -154,6 +154,12 @@ jobs:
           cd infra
           echo "🚀 Deploying Internal Tools Infrastructure (Production)"
 
+          # Deploy Authentication stack first
+          echo "🔐 Deploying Authentication Stack"
+          cdk deploy "InternalTools-AuthStack" \
+            --require-approval never \
+            --context environment=$ENV
+
           # Deploy API Gateway stack
           echo "📡 Deploying API Gateway Stack"
           cdk deploy "InternalTools-ApiStack" \
@@ -161,7 +167,7 @@ jobs:
             --context environment=$ENV
 
           # Deploy Credential Sharing stack
-          echo "🔐 Deploying Credential Sharing Stack"
+          echo "💾 Deploying Credential Sharing Stack"
           cdk deploy "InternalTools-CredentialSharingStack" \
             --require-approval never \
             --context environment=$ENV

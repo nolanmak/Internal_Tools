@@ -22,10 +22,15 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 800));
 
+    console.log('Attempting login with password:', password);
+    console.log('Password length:', password.length);
+
     if (validatePassword(password)) {
+      console.log('Password validation successful');
       setAuthSession();
       onLogin();
     } else {
+      console.log('Password validation failed');
       setError('Invalid password. Please try again.');
       setPassword('');
     }
@@ -66,14 +71,15 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
               </div>
               <button
                 type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer hover:bg-slate-700/50 rounded-r-lg transition-colors"
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={isLoading}
+                tabIndex={-1}
               >
                 {showPassword ? (
-                  <EyeOff className="h-5 w-5 text-slate-400 hover:text-slate-300" />
+                  <EyeOff className="h-5 w-5 text-slate-400 hover:text-slate-200 transition-colors" />
                 ) : (
-                  <Eye className="h-5 w-5 text-slate-400 hover:text-slate-300" />
+                  <Eye className="h-5 w-5 text-slate-400 hover:text-slate-200 transition-colors" />
                 )}
               </button>
             </div>

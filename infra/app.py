@@ -6,6 +6,7 @@ from aws_cdk import App, Environment
 
 from stacks.api_stack import ApiStack
 from stacks.credential_sharing_stack import CredentialSharingStack
+from stacks.auth_stack import AuthStack
 
 load_dotenv()
 
@@ -19,7 +20,15 @@ env = Environment(
 
 env_name = os.environ.get("ENV", "production")
 
-# 1. API Gateway Stack (Production only)
+# 1. Authentication Stack (Cognito User Pool)
+auth_stack = AuthStack(
+    app,
+    "InternalTools-AuthStack",
+    resource_suffix="",
+    env=env
+)
+
+# 2. API Gateway Stack (Production only)
 api_stack = ApiStack(
     app,
     "InternalTools-ApiStack",
@@ -27,7 +36,7 @@ api_stack = ApiStack(
     env=env
 )
 
-# 2. Credential Sharing Stack (S3 bucket with 24-hour auto-delete)
+# 3. Credential Sharing Stack (S3 bucket with 24-hour auto-delete)
 credential_sharing_stack = CredentialSharingStack(
     app,
     "InternalTools-CredentialSharingStack",
