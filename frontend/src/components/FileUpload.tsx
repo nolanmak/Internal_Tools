@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Upload, File, X, CheckCircle, AlertCircle, Copy, LogOut } from 'lucide-react';
-import { uploadToS3, isValidFileType, formatFileSize } from '@/lib/s3';
+import { Upload, File, X, CheckCircle, AlertCircle, Copy, LogOut, Clock, Film, Archive } from 'lucide-react';
+import { uploadToS3, formatFileSize, StorageType, STORAGE_OPTIONS } from '@/lib/s3';
 import { clearAuthSession } from '@/lib/auth';
 
 interface FileUploadProps {
@@ -15,13 +15,22 @@ interface UploadedFile {
   size: number;
   url: string;
   uploadTime: Date;
+  storageType: StorageType;
+  retention: string;
 }
+
+const STORAGE_ICONS: Record<StorageType, React.ReactNode> = {
+  temp: <Clock className="h-5 w-5" />,
+  media: <Film className="h-5 w-5" />,
+  permanent: <Archive className="h-5 w-5" />,
+};
 
 export default function FileUpload({ onLogout }: FileUploadProps) {
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [error, setError] = useState('');
+  const [storageType, setStorageType] = useState<StorageType>('temp');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogout = () => {
@@ -56,26 +65,14 @@ export default function FileUpload({ onLogout }: FileUploadProps) {
   };
 
   const handleFiles = async (files: File[]) => {
-    const validFiles = files.filter(file => {
-      if (!isValidFileType(file)) {
-        setError(`Invalid file type: ${file.name}. Only .env, .txt, .json, .yaml, .log, and .conf files are allowed.`);
-        return false;
-      }
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        setError(`File too large: ${file.name}. Maximum size is 5MB.`);
-        return false;
-      }
-      return true;
-    });
-
-    if (validFiles.length === 0) return;
+    if (files.length === 0) return;
 
     setUploading(true);
     setError('');
 
-    for (const file of validFiles) {
+    for (const file of files) {
       try {
-        const result = await uploadToS3(file);
+        const result = await uploadToS3(file, storageType);
 
         if (result.success && result.fileUrl) {
           const uploadedFile: UploadedFile = {
@@ -84,6 +81,8 @@ export default function FileUpload({ onLogout }: FileUploadProps) {
             size: file.size,
             url: result.fileUrl,
             uploadTime: new Date(),
+            storageType: result.storageType || storageType,
+            retention: result.retention || STORAGE_OPTIONS[storageType].label,
           };
 
           setUploadedFiles(prev => [uploadedFile, ...prev]);
@@ -119,7 +118,7 @@ export default function FileUpload({ onLogout }: FileUploadProps) {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">ShadowShare</h1>
-            <p className="text-slate-400">Secure temporary file sharing • Files auto-delete in 24 hours</p>
+            <p className="text-slate-400">Secure file sharing with flexible retention options</p>
           </div>
           <button
             onClick={handleLogout}
@@ -128,6 +127,35 @@ export default function FileUpload({ onLogout }: FileUploadProps) {
             <LogOut className="h-4 w-4 mr-2" />
             Logout
           </button>
+        </div>
+
+        {/* Storage Type Selector */}
+        <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700 p-6 mb-8">
+          <h3 className="text-lg font-semibold text-white mb-4">Storage Duration</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {(Object.keys(STORAGE_OPTIONS) as StorageType[]).map((type) => (
+              <button
+                key={type}
+                onClick={() => setStorageType(type)}
+                className={`p-4 rounded-lg border-2 transition-all text-left ${
+                  storageType === type
+                    ? 'border-purple-500 bg-purple-500/20'
+                    : 'border-slate-600 hover:border-slate-500 bg-slate-700/30'
+                }`}
+              >
+                <div className="flex items-center mb-2">
+                  <span className={storageType === type ? 'text-purple-400' : 'text-slate-400'}>
+                    {STORAGE_ICONS[type]}
+                  </span>
+                  <span className={`ml-2 font-semibold ${storageType === type ? 'text-white' : 'text-slate-300'}`}>
+                    {STORAGE_OPTIONS[type].label}
+                  </span>
+                </div>
+                <p className="text-sm text-slate-400">{STORAGE_OPTIONS[type].description}</p>
+                <p className="text-xs text-slate-500 mt-1">Max: {STORAGE_OPTIONS[type].maxSize}</p>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Upload Area */}
@@ -145,8 +173,13 @@ export default function FileUpload({ onLogout }: FileUploadProps) {
           >
             <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">Upload Files</h3>
-            <p className="text-slate-400 mb-4">
-              Drag and drop your .env, .txt, .json, .yaml, .log, or .conf files here
+            <p className="text-slate-400 mb-2">
+              {storageType === 'temp' && 'Drag and drop .env, .txt, .json, .yaml, .log, or .conf files'}
+              {storageType === 'media' && 'Drag and drop videos, images, PDFs, or zip files'}
+              {storageType === 'permanent' && 'Drag and drop any file type'}
+            </p>
+            <p className="text-purple-400 text-sm mb-4">
+              Retention: {STORAGE_OPTIONS[storageType].label} • Max size: {STORAGE_OPTIONS[storageType].maxSize}
             </p>
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -169,7 +202,11 @@ export default function FileUpload({ onLogout }: FileUploadProps) {
               ref={fileInputRef}
               type="file"
               multiple
-              accept=".env,.txt,.text,.log,.json,.yaml,.yml,.conf,.config"
+              accept={
+                storageType === 'temp' ? '.env,.txt,.text,.log,.json,.yaml,.yml,.conf,.config' :
+                storageType === 'media' ? '.mp4,.mov,.avi,.mkv,.webm,.mp3,.wav,.png,.jpg,.jpeg,.gif,.pdf,.zip' :
+                '*'
+              }
               onChange={handleFileInput}
               className="hidden"
             />
@@ -197,11 +234,17 @@ export default function FileUpload({ onLogout }: FileUploadProps) {
                   className="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg border border-slate-600"
                 >
                   <div className="flex items-center space-x-3">
-                    <File className="h-5 w-5 text-blue-400" />
+                    <span className={
+                      file.storageType === 'temp' ? 'text-yellow-400' :
+                      file.storageType === 'media' ? 'text-blue-400' :
+                      'text-green-400'
+                    }>
+                      {STORAGE_ICONS[file.storageType]}
+                    </span>
                     <div>
                       <p className="text-white font-medium">{file.name}</p>
                       <p className="text-slate-400 text-sm">
-                        {formatFileSize(file.size)} • Uploaded {file.uploadTime.toLocaleTimeString()}
+                        {formatFileSize(file.size)} • {file.retention} • Uploaded {file.uploadTime.toLocaleTimeString()}
                       </p>
                     </div>
                   </div>
@@ -224,10 +267,11 @@ export default function FileUpload({ onLogout }: FileUploadProps) {
                 </div>
               ))}
             </div>
-            <div className="mt-4 p-3 bg-yellow-900/30 border border-yellow-700 rounded-lg">
-              <p className="text-yellow-200 text-sm">
-                ⚠️ These files will be automatically deleted from the server after 24 hours.
-                Make sure to download or copy them before then.
+            <div className="mt-4 p-3 bg-slate-700/50 border border-slate-600 rounded-lg">
+              <p className="text-slate-300 text-sm">
+                <span className="text-yellow-400">⏱ 24 Hours:</span> Auto-deleted after 1 day<br />
+                <span className="text-blue-400">🎬 30 Days:</span> Auto-deleted after 30 days<br />
+                <span className="text-green-400">📦 Permanent:</span> Stored indefinitely
               </p>
             </div>
           </div>

@@ -1,13 +1,36 @@
+export type StorageType = 'temp' | 'media' | 'permanent';
+
 export interface UploadResult {
   success: boolean;
   fileUrl?: string;
   error?: string;
+  storageType?: StorageType;
+  retention?: string;
 }
 
-export async function uploadToS3(file: File): Promise<UploadResult> {
+export const STORAGE_OPTIONS: Record<StorageType, { label: string; description: string; maxSize: string }> = {
+  temp: {
+    label: '24 Hours',
+    description: 'For API keys, secrets, and sensitive configs',
+    maxSize: '5MB',
+  },
+  media: {
+    label: '30 Days',
+    description: 'For videos, images, and large files',
+    maxSize: '500MB',
+  },
+  permanent: {
+    label: 'Permanent',
+    description: 'Files stored indefinitely',
+    maxSize: '100MB',
+  },
+};
+
+export async function uploadToS3(file: File, storageType: StorageType = 'temp'): Promise<UploadResult> {
   try {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('storageType', storageType);
 
     const response = await fetch('/api/upload', {
       method: 'POST',
@@ -15,13 +38,16 @@ export async function uploadToS3(file: File): Promise<UploadResult> {
     });
 
     if (!response.ok) {
-      throw new Error(`Upload failed: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Upload failed: ${response.statusText}`);
     }
 
     const result = await response.json();
     return {
       success: true,
       fileUrl: result.fileUrl,
+      storageType: result.storageType,
+      retention: result.retention,
     };
   } catch (error) {
     console.error('Upload error:', error);
