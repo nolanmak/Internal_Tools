@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Lock, Eye, EyeOff } from 'lucide-react';
-import { validatePassword, setAuthSession } from '@/lib/auth';
+import { setAuthSession } from '@/lib/auth';
 
 interface LoginFormProps {
   onLogin: () => void;
@@ -19,23 +19,29 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     setIsLoading(true);
     setError('');
 
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 800));
+    try {
+      const response = await fetch('/api/auth/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
 
-    console.log('Attempting login with password:', password);
-    console.log('Password length:', password.length);
+      const data = await response.json();
 
-    if (validatePassword(password)) {
-      console.log('Password validation successful');
-      setAuthSession();
-      onLogin();
-    } else {
-      console.log('Password validation failed');
-      setError('Invalid password. Please try again.');
+      if (data.success) {
+        setAuthSession();
+        onLogin();
+      } else {
+        setError(data.error || 'Invalid password. Please try again.');
+        setPassword('');
+      }
+    } catch (err) {
+      console.error('Auth error:', err);
+      setError('Authentication failed. Please try again.');
       setPassword('');
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   return (
