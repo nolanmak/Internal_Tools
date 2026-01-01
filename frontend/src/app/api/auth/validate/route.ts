@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
+import { fromIni } from '@aws-sdk/credential-providers';
+
+// Use named profile for local dev, falls back to env vars / IAM role in production
+const isDev = process.env.NODE_ENV === 'development';
 
 const secretsClient = new SecretsManagerClient({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-  },
+  region: 'us-east-1',
+  ...(isDev && { credentials: fromIni({ profile: 'shadowshare' }) }),
 });
 
 const SECRET_ARN = 'arn:aws:secretsmanager:us-east-1:975050218051:secret:ShadowShareAccess-oZqqoj';
